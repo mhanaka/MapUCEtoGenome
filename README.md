@@ -10,13 +10,14 @@ Author of current repo: Hanaka Mera   mailto:hanaka.mera[@]my.jcu.edu.au
 
 ## Getting input data
 
-1. For mapping UCEs: [MapUCEtoGenome_general.sh](https://github.com/mhanaka/MapUCEtoGenome/blob/main/MapUCEtoGenome_general.sh)
-2. For ML tree: [phylogeny.sh](https://github.com/mhanaka/MapUCEtoGenome/blob/main/phylogeny.sh)
+1. For mapping UCEs: [1_MapUCEtoGenome_general.sh](https://github.com/mhanaka/MapUCEtoGenome/blob/main/1_MapUCEtoGenome_general.sh)
+2. For ML tree: [2_phylogeny.sh](https://github.com/mhanaka/MapUCEtoGenome/blob/main/2_phylogeny.sh)
 
 ## Plotting
 
-- Data wrangling: [datawrangle.R](https://github.com/mhanaka/MapUCEtoGenome/blob/main/datawrangle.R)
+- Plot phylogeny: [R1_tree.R](https://github.com/mhanaka/MapUCEtoGenome/blob/main/R1_tree.R)
+- Data wrangling mapped UCEs: [R2_datawrangle.R](https://github.com/mhanaka/MapUCEtoGenome/blob/main/R2_datawrangle.R)
 - Plot mapped UCEs (general overview): [.R](https://github.com/mhanaka/MapUCEtoGenome/blob/main/)
 - Plot mapped UCEs (using [chromoMap](https://lakshay-anand.github.io/chromoMap/docs.html)): [.R](https://github.com/mhanaka/MapUCEtoGenome/blob/main/)
-- Plot phylogeny: [.R](https://github.com/mhanaka/MapUCEtoGenome/blob/main/)
+
 
