@@ -32,7 +32,7 @@ cut -f1-3 ncbi_dataset.tsv > ncbi_to_download.list
  #https://datadryad.org/stash/dataset/doi:10.5061/dryad.9p8cz8wc8
   #Cowman_etal_Hexa_v2_PROBE_SETS/Cowman_etal_APPENDIX_C-hexa-v2-final-probes.fasta
 
-mkdir -p /home/{bin,genomes/archives,probes,mapUCE}
+mkdir -p /home/{bin,genomes/archives,probes,mapUCE/tree}
 
 ######################################################################
 
