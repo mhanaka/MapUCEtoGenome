@@ -14,11 +14,11 @@ library(tidyverse)
 #system('mkdir export')
 
 ## Read all files ----
-  #Excluding Octocorallias that didn't return any results
-  #Unhash if you also have those files
-#hexatrans <- read.delim("../Cowman etal 2020_phylogenies/Cowman_etal_Hexa_v2_PROBE_SETS/hexatrans.tsv",header=FALSE)
+  #Note: Excluding Octocorallias that didn't return any results
+  #Hash 'hexatrans' and 'infosites' if you don't have those files. Note you will have to also comment out further down the script
+hexatrans <- read.delim("../Cowman etal 2020_phylogenies/Cowman_etal_Hexa_v2_PROBE_SETS/hexatrans.tsv",header=FALSE)
 taxon <- read.delim("data/taxon.tsv",header=TRUE) 
-#infosites <- read.delim("data/infosites-i50.csv",header=TRUE,sep=',') 
+infosites <- read.delim("data/infosites-i50.csv",header=TRUE,sep=',') 
 uce_type_summaries <- list.files(path="data/genomesToMatch/",pattern="*uce_type_summary.txt",recursive=TRUE)
 chromo_infos <- list.files(path="data/genomesToMatch/",pattern="*chromoinfo.txt",recursive=TRUE)
 
@@ -376,134 +376,6 @@ common_uce_chromo_loose <-
   rename(Nematostella_vectensis_G=Chr)
 uce_inphylogeny_loose <- 
   left_join(uce_inphylogeny_loose,Nematostella_vectensis_G_chromo_genome_loose %>% select(UCE,Chr),by="UCE") %>% 
-  rename(Nematostella_vectensis_G=Chr)
-
-###---###---###---###---###---###---###---###---###---###---###---###---###
-
-# Repeat for C99 loose ----
-
-## Read all files ----
-uce_type_summaries_C99loose <- list.files(path="data/genomesToMatch_C99loose/",pattern="*uce_type_summary.txt",recursive=TRUE)
-
-all_C99loose <- lapply(uce_type_summaries_C99loose, function(i){
-  i <- paste0("data/genomesToMatch_C99loose/",i)
-  read_delim(i,col_names=FALSE,show_col_types=FALSE,delim="\t")
-})
-names(all_C99loose) <- sub("([A-Za-z]+_[a-z]+_[A-Z]).*","\\1",uce_type_summaries_C99loose)
-
-## Data wrangle ----
-df_all_C99loose <- do.call(rbind.data.frame, all_C99loose) %>% 
-  mutate(genome=sub("\\..*","",row.names(.)))
-colnames(df_all_C99loose) <- c("UCE","Scaf","UCEstart","Type","Distance","GFF type list","genome")
-df_all_C99loose = left_join(df_all_C99loose,hexatrans,by="UCE") %>% 
-  mutate(origin=case_when(is.na(origin) ~ "genome",  TRUE ~ origin),
-         UCE=sub("_C99","",sub("uce-","",UCE)))
-#"Distance" is from "previous UCE on scaffold".
-df_all_C99loose = left_join(df_all_C99loose,taxon, by="genome")
-
-#Group by scaffolds
-all_C99loose_scaf <- df_all_C99loose %>% 
-  group_by(Scaf,genome,Order) %>% add_tally() %>% ungroup() %>% rename(n.UCEonScaf=n)
-#Group by identified loci types
-all_C99loose_type <- df_all_C99loose %>% 
-  group_by(Type,genome,Order) %>% summarise(n=n()) %>% ungroup() %>% 
-  group_by(genome) %>% 
-  mutate(percent=n/sum(n),
-         percent=round(percent,digits=3),
-         Type=as.factor(replace_na(Type,"Unclassified")),
-         Type=recode(Type,"E"="Exon","I"="Intron","EI"="Exon and Intron","N"="Intergenic"),
-         Type=fct_relevel(Type,c("Exon","Intron","Exon and Intron","Intergenic","Unclassified"))) %>% 
-  ungroup()
-#Group by UCE (to find out commonly found UCE loci - for genomes with chromoinfo only)
-common_uce_chromo_C99loose <- df_all_C99loose %>% 
-  filter(genome=="Acropora_hyacinthus_G"| genome=="Acropora_millepora_G" | genome=="Catalaphyllia_jardinei_G" |
-           genome=="Montipora_capitata_C" | genome=="Nematostella_vectensis_G") %>% droplevels() %>% 
-  group_by(UCE) %>% summarise(n=n()) %>% ungroup() %>% droplevels() #filter(n >= 4) %>%
-#Group by UCE (to find out commonly found UCE loci - all 29 genomes. tried a few, n>=15 is a good cutoff for exploratory purposes
-common_uce_all_C99loose <- df_all_C99loose %>% 
-  group_by(UCE) %>% summarise(n=n()) %>% ungroup() %>% filter(n >= 15) %>% droplevels() 
-
-#Take transcriptome based baits into consideration
-all_C99loose_type_trans <- df_all_C99loose %>% 
-  group_by(Type,genome,origin,Order) %>% summarise(n=n()) %>% ungroup() %>% 
-  group_by(genome) %>% 
-  mutate(percent=n/sum(n),
-         percent=round(percent,digits=3),
-         Type=as.factor(replace_na(Type,"Unclassified")),
-         Type=recode(Type,"E"="Exon","I"="Intron","EI"="Exon and Intron","N"="Intergenic"),
-         Type=fct_relevel(Type,c("Exon","Intron","Exon and Intron","Intergenic","Unclassified"))) %>% 
-  ungroup() 
-  #Nothing mapped to transcriptome 
-
-## Genome with chromosome info ----
-### Acropora_hyacinthus_G ----
-Acropora_hyacinthus_G_chromo_genome_C99loose <- 
-  left_join(df_all_C99loose %>% filter(genome=="Acropora_hyacinthus_G"),
-            Acropora_hyacinthus_G_chromo %>% select(c(Chr,Scaf)), by="Scaf")
-Acropora_hyacinthus_G_chromo_genome_C99loose = Acropora_hyacinthus_G_chromo_genome_C99loose %>% 
-  mutate(UCEend=UCEstart+120,
-         Chr = case_when(is.na(Chr)==FALSE ~ Chr,  TRUE ~ 'others'),
-         max = unlist(Acropora_hyacinthus_G_chromo[match(Acropora_hyacinthus_G_chromo_genome_C99loose$Chr, Acropora_hyacinthus_G_chromo$Chr),3]),
-         remove=case_when(max == '0' ~ 'yes',  UCEend > max ~ 'yes',  TRUE ~ 'no')) %>% 
-  relocate(UCEend, .after=UCEstart)
-common_uce_chromo_C99loose <- 
-  left_join(common_uce_chromo_C99loose,Acropora_hyacinthus_G_chromo_genome_C99loose %>% select(UCE,Chr),by="UCE") %>% 
-  rename(Acropora_hyacinthus_G=Chr)
-
-### Acropora_millepora_G ----
-Acropora_millepora_G_chromo_genome_C99loose <- 
-  left_join(df_all_C99loose %>% filter(genome=="Acropora_millepora_G"),
-            Acropora_millepora_G_chromo %>% select(c(Chr,Scaf)), by="Scaf")
-Acropora_millepora_G_chromo_genome_C99loose = Acropora_millepora_G_chromo_genome_C99loose %>% 
-  mutate(UCEend=UCEstart+120,
-         Chr = case_when(is.na(Chr)==FALSE ~ Chr,  TRUE ~ 'others'),
-         max = unlist(Acropora_millepora_G_chromo[match(Acropora_millepora_G_chromo_genome_C99loose$Chr, Acropora_millepora_G_chromo$Chr),3]),
-         remove=case_when(max == '0' ~ 'yes',  UCEend > max ~ 'yes',  TRUE ~ 'no')) %>% 
-  relocate(UCEend, .after=UCEstart)
-common_uce_chromo_C99loose <- 
-  left_join(common_uce_chromo_C99loose,Acropora_millepora_G_chromo_genome_C99loose %>% select(UCE,Chr),by="UCE") %>% 
-  rename(Acropora_millepora_G=Chr)
-
-### Catalaphyllia_jardinei_G ----
-Catalaphyllia_jardinei_G_chromo_genome_C99loose <- 
-  left_join(df_all_C99loose %>% filter(genome=="Catalaphyllia_jardinei_G"),
-            Catalaphyllia_jardinei_G_chromo %>% select(c(Chr,Scaf)), by="Scaf")
-Catalaphyllia_jardinei_G_chromo_genome_C99loose = Catalaphyllia_jardinei_G_chromo_genome_C99loose %>% 
-  mutate(UCEend=UCEstart+120,
-         Chr = case_when(is.na(Chr)==FALSE ~ Chr,  TRUE ~ 'others'),
-         max = unlist(Catalaphyllia_jardinei_G_chromo[match(Catalaphyllia_jardinei_G_chromo_genome_C99loose$Chr, Catalaphyllia_jardinei_G_chromo$Chr),3]),
-         remove=case_when(max == '0' ~ 'yes',  UCEend > max ~ 'yes',  TRUE ~ 'no')) %>% 
-  relocate(UCEend, .after=UCEstart)
-common_uce_chromo_C99loose <- 
-  left_join(common_uce_chromo_C99loose,Catalaphyllia_jardinei_G_chromo_genome_C99loose %>% select(UCE,Chr),by="UCE") %>% 
-  rename(Catalaphyllia_jardinei_G=Chr)
-
-### Montipora_capitata_C ----
-Montipora_capitata_C_chromo_genome_C99loose <- 
-  left_join(df_all_C99loose %>% filter(genome=="Montipora_capitata_C"),
-            Montipora_capitata_C_chromo %>% select(c(Chr,Scaf)), by="Scaf")
-Montipora_capitata_C_chromo_genome_C99loose = Montipora_capitata_C_chromo_genome_C99loose %>% 
-  mutate(UCEend=UCEstart+120,
-         Chr = case_when(is.na(Chr)==FALSE ~ Chr,  TRUE ~ 'others'),
-         max = unlist(Montipora_capitata_C_chromo[match(Montipora_capitata_C_chromo_genome_C99loose$Chr, Montipora_capitata_C_chromo$Chr),3]),
-         remove=case_when(max == '0' ~ 'yes',  UCEend > max ~ 'yes',  TRUE ~ 'no')) %>% 
-  relocate(UCEend, .after=UCEstart)
-common_uce_chromo_C99loose <- 
-  left_join(common_uce_chromo_C99loose,Montipora_capitata_C_chromo_genome_C99loose %>% select(UCE,Chr),by="UCE") %>% 
-  rename(Montipora_capitata_C=Chr)
-
-### Nematostella_vectensis_G ----
-Nematostella_vectensis_G_chromo_genome_C99loose <- 
-  left_join(df_all_C99loose %>% filter(genome=="Nematostella_vectensis_G"),
-            Nematostella_vectensis_G_chromo %>% select(c(Chr,Scaf)), by="Scaf")
-Nematostella_vectensis_G_chromo_genome_C99loose = Nematostella_vectensis_G_chromo_genome_C99loose %>% 
-  mutate(UCEend=UCEstart+120,
-         Chr = case_when(is.na(Chr)==FALSE ~ Chr,  TRUE ~ 'others'),
-         max = unlist(Nematostella_vectensis_G_chromo[match(Nematostella_vectensis_G_chromo_genome_C99loose$Chr, Nematostella_vectensis_G_chromo$Chr),3]),
-         remove=case_when(max == '0' ~ 'yes',  UCEend > max ~ 'yes',  TRUE ~ 'no')) %>% 
-  relocate(UCEend, .after=UCEstart)
-common_uce_chromo_C99loose <- 
-  left_join(common_uce_chromo_C99loose,Nematostella_vectensis_G_chromo_genome_C99loose %>% select(UCE,Chr),by="UCE") %>% 
   rename(Nematostella_vectensis_G=Chr)
 
 ###---###---###---###---###---###---###---###---###---###---###---###---###
