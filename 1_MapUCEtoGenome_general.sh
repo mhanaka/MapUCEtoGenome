@@ -14,6 +14,7 @@
 ######################################################################
 
 ## 0. Data
+
 #1. NCBI Refseq only
  #https://www.ncbi.nlm.nih.gov/assembly/?term=hexacorallia, tick Latest RefSeq, Format:ID Table, Send to:file
 grep -v "N/A" assembly_result.txt | sed 1d | cut -f3 > refseq_to_download.list
@@ -26,9 +27,10 @@ cut -f1-3 ncbi_dataset.tsv > ncbi_to_download.list
 #2. Other sources
     #reefgenomics.org
     #http://cyanophora.rutgers.edu
+    #https://matzlab.weebly.com/data--code.html
     #Checked ENA https://www.ebi.ac.uk/ena/browser/home but didn't find anything extra
 
-#3. Probe set
+#3. hexa-v2 Probe set
  #https://datadryad.org/stash/dataset/doi:10.5061/dryad.9p8cz8wc8
   #Cowman_etal_Hexa_v2_PROBE_SETS/Cowman_etal_APPENDIX_C-hexa-v2-final-probes.fasta
 
@@ -40,11 +42,11 @@ mkdir -p /home/{bin,genomes/archives,probes,mapUCE/tree}
 
 ### 1-A. Download genome .fna and .gff from RefSeq
 
-#Note: GFF = General Feature Format, which is an annotation file. For clarification on what all the metadata means, see here: https://github.com/The-Sequence-Ontology/Specifications/blob/master/gff3.md
+    #Note: GFF = General Feature Format, which is an annotation file. For clarification on what all the metadata means, see here: https://github.com/The-Sequence-Ontology/Specifications/blob/master/gff3.md
 
 mkdir -p /home/mapUCE/{genomesToMatch,individual_probes}
 cd /home/mapUCE
-nano refseq_to_download.list #copy and paste refseq_to_download.list | cut -f1
+#rsync or copy/paste refseq_to_download.list | cut -f1
 
 cd /home/genomes
 wget ftp://ftp.ncbi.nlm.nih.gov/genomes/ASSEMBLY_REPORTS/assembly_summary_refseq.txt
@@ -61,7 +63,7 @@ while read line; do
   wget $line'_genomic.gff.gz'
   gunzip $sample*
 done < ftp_folder.list
-#Create new directory with renamed taxon and move files. **Note**:sqlite in phyluce pipeline doesn't like periods in file names so had to change the last dot to underscore
+#Create new directory with renamed taxon and move files. **Note**:sqlite in phyluce pipeline doesn't like periods in file names so have to change the last dot to underscore
 sed -i 's/ /_/g' ftp_download.list 
 while read id taxon chromo short; do
   id_=$(echo $id | sed 's/\./_/')
@@ -118,7 +120,8 @@ while read taxon fna gff; do
     mv $taxon* $fnagz $gffgz "$taxon"/
 done < /home/mapUCE/more_download.list
 
-    #Switch to phylogeny.sh for making trees
+    #Switch to 2_phylogeny.sh from here for loci harvesting and making trees
+    #Continue to step 2 for loci mapping
 
 ######################################################################
 
@@ -127,16 +130,15 @@ done < /home/mapUCE/more_download.list
 cd /home/mapUCE
 #First, check the source name of each probe set 
 cut -d, -f5 /home/probes/Cowman_etal_APPENDIX_C-hexa-v2-final-probes.fasta | grep "probes-source:" | sort | uniq | sed 's/probes-source://' > probe_source.list
-    #Note: Cowman2020 and Quattrini2018 designed probes to be abbreviation of taxon name=** '**mask' for genomes and '**' for transcriptomes
+    #Note: Cowman2020 and Quattrini2018 designed probes to be abbreviation of taxon name=** '**mask' for genomes and '**' for transcriptomes. See each publications for details.
 
 #Then extract individual probes using bash script
 nano get_individual_probes_from_list.sh
-    #This bash script is modified from matthewhvandam's github repo (https://github.com/matthewhvandam/integrating-functional-genomics-into-phylogenomics)
+    #This bash script is modified as below from matthewhvandam's github repo (https://github.com/matthewhvandam/integrating-functional-genomics-into-phylogenomics)
 
 ###Begin bash script
 #!/bin/bash
-while IFS= read -r string
-do
+while IFS= read -r string; do
     critter=$1
     [ -z $1 ] && critter=$string
 
@@ -153,12 +155,13 @@ chmod a+x get_individual_probes_from_list.sh
 
 ## 3. Find where the probes are hiding in the genome and identify the loci type using info from .gff
 
-### 3-0. Prepare programs
+### 3-0. Prepare scripts
+
 cd /home/bin
 #uce_kit python scripts
 git clone https://github.com/calacademy-research/ccgutils.git
     #If any errors, download python scripts separately and save
-#blat executable (if not found on HPC)
+#blat executable
 rsync -aP rsync://hgdownload.soe.ucsc.edu/genome/admin/exe/linux.x86_64/blat/blat .
 export PATH=$PATH:/home/bin
 
@@ -197,7 +200,7 @@ for dir in *; do
 done
 
 ### 3-4. uce_gff_lines.py
-    #capture STDOUT if you want to use it straight away:  |& tee -a tmp_results.txt
+    #capture STDOUT if you want to use it in 'quickly check results':  |& tee -a tmp_results.txt
 for dir in *; do
     cd $dir
     echo $dir;
@@ -207,9 +210,9 @@ for dir in *; do
     done;
     cd ..
 done
-#Quick check results
+#Quickly check results
 awk '/^0 uces 0 gff lines/{for(x=NR-1;x<=NR+1;x++)d[x];}{a[NR]=$0}END{for(i=1;i<=NR;i++)if(!(i in d))print a[i]}' tmp_results.txt | sed '/gff lines/d' | sed '/tsv$/{N;s/\n/ /}' >> results.txt 
-    #"If match found, add the line and before/after lines in the array d[]. {a[NR]=$0}: save all lines in an array with line number as index. After END: print only the index NOT in the array. Then remove lines that contain 'gff lines', and any line that ends with 'tsv' combine the next line"
+    #awk commands: "If match found, add the line and before/after lines in the array d[]. {a[NR]=$0}: save all lines in an array with line number as index. After END: print only the index NOT in the array. Then remove lines that contain 'gff lines', and any line that ends with 'tsv' combine the next line"
  
  #The final *_uce_type_summary.txt headers are:
  #| UCE | Scaf | UCE pos | Type | Distance | GFF type list |
@@ -235,12 +238,12 @@ cut -f1,5 Montipora_capitata_Cyanophora_v3_with_introns.gff | sort -k2,2gr | sor
 sed 'h; s/Montipora_capitata_HIv3___Scaffold_/Chr/; G; s/\n/\t/' tmp_Montipora_capitata_Cyanophora_v3_chromoinfo.txt | cut -f1-3 > Montipora_capitata_Cyanophora_v3_chromoinfo.txt
 rm tmp_*
 
-### 3-6. Redo non-Refseq genomes because the .gff3 is not technically the same as .gff
+### 3-6. Redo non-Refseq genomes because the .gff3 is not formatted the same way as .gff
 cd Acropora_hyacinthus_GCA_020536085_1
 rm *_uce_type_summary.txt
 while read chr scaf length; do chromo=$(printf 'chr'$chr'\t')
-    sed -n "s/$chromo/$scaf\t/gp" Acropora_hyacinthus_GCA_020536085_1_with_introns.gff >> Acropora_hyacinthus_GCA_020536085_1_with_introns_edited.gff
-done < Acropora_hyacinthus_GCA_020536085_1_chromoinfo.txt
+    sed -n "s/$chromo/$scaf\t/gp" Acropora_hyacinthus_GCA_020536085_1_with_introns.gff >> Acropora_hyacinthus_GCA_020536085_1_with_introns_edited.gff; 
+done < ../../genomesToMatch/Acropora_hyacinthus_GCA_020536085_1/Acropora_hyacinthus_GCA_020536085_1_chromoinfo.txt
 grep "sc[0-9+].*" Acropora_hyacinthus_GCA_020536085_1_with_introns.gff >> Acropora_hyacinthus_GCA_020536085_1_with_introns_edited.gff
 for tsv in *.tsv; do
     echo $tsv;
@@ -251,57 +254,52 @@ done
 cd Catalaphyllia_jardinei_GCA_022496165_2
 rm *_uce_type_summary.txt
 while read chr scaf length; do chromo=$(printf 'Scaffold_'$chr'\t')
-    sed -n "s/$chromo/$scaf\t/gp" Catalaphyllia_jardinei_GCA_022496165_2_with_introns.gff >> Catalaphyllia_jardinei_GCA_022496165_2_with_introns_edited.gff
-done < Catalaphyllia_jardinei_GCA_022496165_2_chromoinfo.txt
-tail -n 131023 Catalaphyllia_jardinei_GCA_022496165_2_with_introns.gff >> Catalaphyllia_jardinei_GCA_022496165_2_with_introns_edited.gff
+    sed -n "s/$chromo/$scaf\t/gp" Catalaphyllia_jardinei_GCA_022496165_2_with_introns.gff >> Catalaphyllia_jardinei_GCA_022496165_2_with_introns_edited.gff;
+done < ../../genomesToMatch/Catalaphyllia_jardinei_GCA_022496165_2/Catalaphyllia_jardinei_GCA_022496165_2_chromoinfo.txt
+tail -n 131023 Catalaphyllia_jardinei_GCA_022496165_2_with_introns.gff >> Catalaphyllia_jardinei_GCA_022496165_2_with_introns_edited.gff #All the rest of scaffolds
 for tsv in *.tsv; do
     echo $tsv;
     /home/bin/python_scripts/uce_gff_lines.py $tsv Catalaphyllia_jardinei_GCA_022496165_2_with_introns_edited.gff >> Catalaphyllia_jardinei_GCA_022496165_2_uce_type_summary.txt
 done
     #edit ../results.txt
 
-cd Montipora_capitata_Cyanophora_v3
-sort -V Montipora_capitata_Cyanophora_v3_with_introns.gff > Montipora_capitata_Cyanophora_v3_with_introns_sorted.gff
-for tsv in *.tsv; do
-    echo $tsv;
-    /home/bin/python_scripts/uce_gff_lines.py $tsv Montipora_capitata_Cyanophora_v3_with_introns_sorted.gff >> Montipora_capitata_Cyanophora_v3_uce_type_summary.txt
-done  #This didn't change anything.
-
 ##################### 
 
-## Repeat from 3-1. uce_kit.py blat but use uce_kit_loose.py as below
+## Repeat from 3-1. uce_kit.py blat but use uce_kit_relaxed.py as below
 
 cd /home/bin/python_scripts
-cp uce_kit.py uce_kit_loose.py
-nano uce_kit_loose.py 
+cp uce_kit.py uce_kit_relaxed.py
+nano uce_kit_relaxed.py 
     #Change line298 len_match=120 to 100. (len_match=110 doesn't make any difference)
-    #If you change line298 pct_match=99.0 to 98.0, you get noisy matches.
-    #Also tried line398 to add -minScore=20 -minIdentity=0, but didn't make any difference when pct_match=99.0 and len_match=120.
+    #Change line298 pct_match=99.0 to 70.0. Beaware that this will result in many duplicates. Filter these in R (later steps).
+    #Note: also tried line398 to add -minScore=20 -minIdentity=0, but didn't make any difference.
 
 #Doublecheck that the only part I wanted to edit was saved
-diff /home/bin/python_scripts/uce_kit.py /home/bin/python_scripts/uce_kit_loose.py
+diff /home/bin/python_scripts/uce_kit.py /home/bin/python_scripts/uce_kit_relaxed.py
 
-cd /home/mapUCE/genomesToMatch_loose
+cd /home/mapUCE/genomesToMatch_relaxed
 while read name; do
     mkdir $name
 done < ../genomes.list
 
-### 3-1. uce_kit_loose.py blat
+### 3-1. uce_kit_relaxed.py blat
 for dir in *; do
     fna=$(ls /home/genomes/archives/${dir}/*.fna);
     for indprobe in $(ls ../individual_probes/); do
         acronym=$(echo $indprobe | sed 's/_.*//');
-        /home/bin/python_scripts/uce_kit_loose.py blat ../individual_probes/$indprobe $fna > ${dir}/${acronym}_matches.m8
+        /home/bin/python_scripts/uce_kit_relaxed.py blat ../individual_probes/$indprobe $fna > ${dir}/${acronym}_matches.m8
     done;
 done
 
-#... and continue to 3-4. uce_gff_lines.py
+    #... and continue to 3-4. uce_gff_lines.py
 
 ######################################################################
 
 ## 4. R data wrangle (local)
+
 cd ~/Analysis/Map-UCE-to-Genome/data
 rsync -Lav --exclude="*.gff" --exclude="*.tsv" --exclude="*.m8" user@hpc:/home/mapUCE/genomesToMatch .
-rsync -Lav --exclude="*.tsv" --exclude="*.m8" user@hpc:/home/mapUCE/genomesToMatch_loose .
+rsync -Lav --exclude="*.tsv" --exclude="*.m8" user@hpc:/home/mapUCE/genomesToMatch_relaxed .
 
-    #Go to datawrangle.R
+    #Go to R_2_datawrangle.R
+
