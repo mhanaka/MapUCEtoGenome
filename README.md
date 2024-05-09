@@ -15,7 +15,7 @@ Author of current repo: Hanaka Mera   mailto:hanaka.mera[@]my.jcu.edu.au
 1. For mapping UCEs: [1_MapUCEtoGenome_general.sh](https://github.com/mhanaka/MapUCEtoGenome/blob/main/1_MapUCEtoGenome_general.sh)
 2. For ML tree: [2_phylogeny.sh](https://github.com/mhanaka/MapUCEtoGenome/blob/main/2_phylogeny.sh)
 
-## Plotting
+## Plotting and analysing
 
 1. Plot phylogeny: [R_1_tree.R](https://github.com/mhanaka/MapUCEtoGenome/blob/main/R_1_tree.R)
 2. Data wrangling mapped UCEs: [R_2_datawrangle.R](https://github.com/mhanaka/MapUCEtoGenome/blob/main/R_2_datawrangle.R)
