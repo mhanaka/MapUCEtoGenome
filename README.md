@@ -6,7 +6,7 @@ Mapping part generally following
 [integrating-functional-genomics-into-phylogenomics](https://github.com/matthewhvandam/integrating-functional-genomics-into-phylogenomics) (Van Dam et al. 2018)
 and relying on  [calacademy's uce_types](https://github.com/calacademy-research/ccgutils/tree/master/uce_types).
 
-Author of current repo: Hanaka Mera
+Author: Hanaka Mera
 
 ---
 
