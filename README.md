@@ -12,7 +12,7 @@ email: hanaka.mera[a]my.jcu.edu.au
 
 ---
 
-## Getting input data
+## Getting input data and data processing
 
 1. For mapping UCEs: [1_MapUCEtoGenome_general.sh](https://github.com/mhanaka/MapUCEtoGenome/blob/main/1_MapUCEtoGenome_general.sh)
 2. For ML tree: [2_phylogeny.sh](https://github.com/mhanaka/MapUCEtoGenome/blob/main/2_phylogeny.sh)
