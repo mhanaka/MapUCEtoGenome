@@ -1,12 +1,14 @@
-# MapUCEtoGenome
+Scripts for harvesting UCEs from genomes for phylogenetic analyis, mapping UCEs back to genomes for investigating genetic characteristics, and plotting.
 
-Scripts for mapping UCEs to genomes, plotting and analysing.
+Harvesting part is modified from [PHYLUCE tutorials](https://phyluce.readthedocs.io/en/latest/index.html).
 
 Mapping part generally following 
 [integrating-functional-genomics-into-phylogenomics](https://github.com/matthewhvandam/integrating-functional-genomics-into-phylogenomics) (Van Dam et al. 2018)
 and relying on  [calacademy's uce_types](https://github.com/calacademy-research/ccgutils/tree/master/uce_types).
 
 Author: Hanaka Mera
+
+email: hanaka.mera[a]my.jcu.edu.au
 
 ---
 
